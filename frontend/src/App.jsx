@@ -6,10 +6,11 @@ function App() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
 
-  const loadBooks = useCallback(async () => {
+  const loadBooks = useCallback(async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
       const data = await api.fetchBooks();
       setBooks(data);
@@ -20,7 +21,14 @@ function App() {
     }
   }, []);
 
-  useEffect(() => { loadBooks(); }, [loadBooks]);
+  useEffect(() => { loadBooks(true); }, [loadBooks]);
+
+  // Scroll-aware glassmorphism
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const handleAdd = async (data, file) => {
     await api.createBook(data, file);
@@ -38,21 +46,39 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
-          <span className="text-2xl">📚</span>
-          <h1 className="text-xl font-semibold text-slate-800">AI Reading Companion</h1>
-          <span className="text-sm text-slate-400 ml-auto">{books.length} 本书</span>
+    <div className="min-h-screen-safe bg-[#FBF7F0]">
+      <header
+        className={`sticky top-0 z-30 transition-all duration-300 ${
+          scrolled
+            ? 'bg-[#FBF7F0]/85 backdrop-blur-md shadow-sm border-b border-[#E8E2D5]'
+            : 'bg-[#FBF7F0] border-b border-transparent'
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
+          <span className="text-lg sm:text-xl text-accent-500 select-none">◆</span>
+          <h1 className="text-lg sm:text-xl font-serif font-semibold text-[#1A1A1A] tracking-wide">
+            阅读花园
+          </h1>
+          <span className="text-xs sm:text-sm text-[#9B9B9B] ml-auto font-light">
+            {books.length} 本
+          </span>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-12">
         {loading ? (
-          <div className="flex justify-center py-24 text-slate-400">加载中...</div>
+          <div className="flex flex-col items-center justify-center py-32 text-[#9B9B9B]">
+            <div className="animate-pulse text-3xl mb-3">📖</div>
+            <p className="text-sm font-light">正在整理书架...</p>
+          </div>
         ) : error ? (
-          <div className="text-center py-24">
-            <p className="text-red-500 mb-4">{error}</p>
-            <button onClick={loadBooks} className="text-sm text-blue-500 hover:underline">重试</button>
+          <div className="text-center py-32">
+            <p className="text-red-400 mb-4 font-light">{error}</p>
+            <button
+              onClick={() => loadBooks(true)}
+              className="text-sm text-accent-600 hover:text-accent-700 underline underline-offset-4 transition-colors"
+            >
+              重试
+            </button>
           </div>
         ) : (
           <BookList
@@ -60,6 +86,7 @@ function App() {
             onAdd={handleAdd}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
+            onRefresh={loadBooks}
           />
         )}
       </main>

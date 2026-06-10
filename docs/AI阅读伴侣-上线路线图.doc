@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 阅读伴侣 — 上线路线图</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: #1A1A1A;
+    line-height: 1.8;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    color: #2D5A4B;
+    border-bottom: 3px solid #2D5A4B;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+  }
+  .subtitle { text-align: center; color: #6B6B6B; font-size: 14px; margin-bottom: 32px; }
+  h2 {
+    color: #2D5A4B;
+    border-left: 4px solid #2D5A4B;
+    padding-left: 12px;
+    margin-top: 36px;
+  }
+  h3 { color: #234A3D; margin-top: 24px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; }
+  th { background: #2D5A4B; color: white; padding: 8px 12px; text-align: left; font-size: 13px; }
+  td { border-bottom: 1px solid #E8E2D5; padding: 8px 12px; font-size: 13px; vertical-align: top; }
+  tr:nth-child(even) td { background: #FBF7F0; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+  .tag-p0 { background: #FEE2E2; color: #991B1B; }
+  .tag-p1 { background: #FEF3C7; color: #92400E; }
+  .tag-p2 { background: #D1FAE5; color: #065F46; }
+  .tag-p3 { background: #E0E7FF; color: #3730A3; }
+  .schedule { background: #FBF7F0; border: 1px solid #E8E2D5; border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
+  .schedule h4 { margin: 0 0 10px; color: #2D5A4B; }
+  .schedule ul { margin: 0; padding-left: 20px; }
+  .schedule li { margin: 4px 0; }
+  .footer { text-align: center; color: #9B9B9B; font-size: 12px; margin-top: 40px; border-top: 1px solid #E8E2D5; padding-top: 16px; }
+</style>
+</head>
+<body>
+
+<h1>📖 AI 阅读伴侣</h1>
+<p class="subtitle">生产上线完善路线图 · 2026 年 6 月 11 日</p>
+
+<h2>🔴 P0 — 不上线就 Blocked</h2>
+
+<h3>1. 移动端响应式适配</h3>
+<table>
+<tr><th style="width:18%">问题</th><th style="width:27%">现状</th><th>需要做</th></tr>
+<tr>
+  <td>iOS Safari 安全区</td>
+  <td>无 safe-area 处理</td>
+  <td>meta viewport 添加 <code>viewport-fit=cover</code>；底部导航/工具栏加 <code>env(safe-area-inset-bottom)</code></td>
+</tr>
+<tr>
+  <td>iOS 100vh 问题</td>
+  <td>使用 <code>h-full</code> / <code>fixed inset-0</code></td>
+  <td>改用 <code>dvh</code> 动态视口单位，或 JS 计算真实视口高度并设置 CSS 变量</td>
+</tr>
+<tr>
+  <td>阅读器工具栏</td>
+  <td>6 个按钮并排，小屏会挤爆</td>
+  <td>移动端（&lt;640px）折叠为汉堡菜单，或精简为 3 个核心按钮</td>
+</tr>
+<tr>
+  <td>书架网格</td>
+  <td><code>sm:grid-cols-2 lg:grid-cols-3</code></td>
+  <td>手机端单列 + 水平卡片布局；增加横向滑动书架的选项</td>
+</tr>
+<tr>
+  <td>EPUB 翻页按钮</td>
+  <td>hover 出现，移动端不可用</td>
+  <td>移动端翻页按钮始终可见（半透明）；支持左右滑动手势（touchstart/touchend）</td>
+</tr>
+<tr>
+  <td>弹窗 (Modal)</td>
+  <td><code>max-w-md</code> 居中弹出</td>
+  <td>移动端改为从底部滑入的 Bottom Sheet，占满屏幕宽高</td>
+</tr>
+</table>
+
+<h3>2. 用户系统（最小可用版）</h3>
+<table>
+<tr><th style="width:18%">方案</th><th style="width:27%">适用场景</th><th>实现要点</th></tr>
+<tr>
+  <td>单用户密码模式</td>
+  <td>个人使用（推荐先做）</td>
+  <td>启动时设 <code>AUTH_PASSWORD</code>；登录页输入密码后签发 JWT；所有 API 验证 token</td>
+</tr>
+<tr>
+  <td>多用户注册/登录</td>
+  <td>多人使用</td>
+  <td>users 表（email + password hash）；JWT 中间件；所有数据按 user_id 隔离</td>
+</tr>
+</table>
+
+<h3>3. 部署就绪</h3>
+<table>
+<tr><th style="width:18%">事项</th><th style="width:27%">现状</th><th>需要做</th></tr>
+<tr><td>环境变量注入</td><td>开发用 .env</td><td>生产构建时注入 <code>VITE_API_BASE</code> 等；后端读取 <code>PORT</code> / <code>DATABASE_PATH</code></td></tr>
+<tr><td>静态文件服务</td><td>前后端分离</td><td>后端 express.static 服务 frontend/dist；单端口部署</td></tr>
+<tr><td>容器化</td><td>无</td><td>编写 Dockerfile；或 Railway/Render 一键部署配置</td></tr>
+<tr><td>数据库备份</td><td>无</td><td>SQLite 定时复制备份；迁移脚本版本管理</td></tr>
+</table>
+
+<h2>🟡 P1 — 体验决定留存</h2>
+
+<h3>4. PWA 支持</h3>
+<table>
+<tr><th>事项</th><th>需要做</th></tr>
+<tr><td>manifest.json</td><td>定义应用名、图标（192/512px）、主题色 <code>#2D5A4B</code>、display: standalone</td></tr>
+<tr><td>Service Worker</td><td>缓存静态资源（CSS/JS/字体），离线时显示"当前离线，已缓存内容仍可阅读"</td></tr>
+<tr><td>iOS 适配</td><td>apple-touch-icon、apple-mobile-web-app-status-bar-style、meta 标签</td></tr>
+</table>
+
+<h3>5. 错误处理 & 用户反馈</h3>
+<table>
+<tr><th>事项</th><th>需要做</th></tr>
+<tr><td>Toast 通知系统</td><td>替换所有 <code>alert()</code>；成功/错误/加载三种状态；自动消失</td></tr>
+<tr><td>全局 Error Boundary</td><td>捕获 React 渲染崩溃，显示友好错误页 + 重试按钮</td></tr>
+<tr><td>网络状态检测</td><td><code>navigator.onLine</code> + fetch 失败自动重试（指数退避）</td></tr>
+<tr><td>表单校验</td><td>前端即时校验 + 后端 422 响应 + 具体错误字段提示</td></tr>
+</table>
+
+<h3>6. EPUB 阅读器增强</h3>
+<table>
+<tr><th>事项</th><th>需要做</th></tr>
+<tr><td>iOS Safari 兼容测试</td><td>实测 foliate-paginator 在 iOS Safari 下的渲染表现</td></tr>
+<tr><td>触摸滑动手势</td><td>水平滑动翻页（<code>touchstart → touchend</code> 计算方向）</td></tr>
+<tr><td>系统深色模式跟随</td><td>检测 <code>prefers-color-scheme: dark</code>，自动开启夜间模式</td></tr>
+<tr><td>字体加载优化</td><td>Google Fonts 国内 CDN 备选（中科大镜像 / 本地字体文件 fallback）</td></tr>
+</table>
+
+<h3>7. 性能优化</h3>
+<table>
+<tr><th>事项</th><th>需要做</th></tr>
+<tr><td>EpubReader 懒加载</td><td><code>React.lazy(() => import('./EpubReader'))</code> + Suspense，首屏 JS 减少约 200KB</td></tr>
+<tr><td>图片懒加载</td><td>封面图 <code>loading="lazy"</code> + 模糊占位符</td></tr>
+<tr><td>API 缓存</td><td>引入 TanStack Query (React Query) 或 SWR，自动去重 + 缓存</td></tr>
+</table>
+
+<h2>🟢 P2 — 功能深度</h2>
+
+<h3>8. PDF 阅读器</h3>
+<p><code>react-pdf</code> 已安装，封装 <code>PdfReader</code> 组件，复用工具栏 UI（进度条替代翻页、缩放替代字号）。</p>
+
+<h3>9. 阅读数据统计</h3>
+<p>阅读时长追踪 → 每日/每周阅读量图表 → 年度阅读报告（类似 Apple Books / 微信读书）。</p>
+
+<h3>10. 笔记系统增强</h3>
+<p>阅读器内长按选中文字 → 添加划线/笔记（foliate-paginator 的 overlayer API 支持）；笔记关联书中位置；支持 Markdown。</p>
+
+<h3>11. 书籍管理增强</h3>
+<p>标签/分类系统；全文搜索（SQLite FTS5）；导入/导出 JSON/CSV；豆瓣 API 自动补全书籍信息。</p>
+
+<h2>⚪ P3 — 锦上添花</h2>
+
+<h3>12. 社交 & 分享</h3>
+<p>生成阅读卡片图片（Canvas → 分享到微信/微博）；公开书单推荐链接。</p>
+
+<h3>13. 多语言 (i18n)</h3>
+<p>中英文切换；当前硬编码文案抽离到 i18n JSON 文件；使用 react-i18next。</p>
+
+<h3>14. 后端升级</h3>
+<p>SQLite → PostgreSQL（多用户）；API 文档 Swagger/OpenAPI；Jest 单元测试 + Playwright E2E。</p>
+
+<h2>📅 建议执行顺序（4 周）</h2>
+
+<div class="schedule">
+<h4>第一周：移动端 + 部署</h4>
+<ul>
+  <li>P0-1 移动端响应式适配（iOS 安全区 / 100vh / 工具栏 / 翻页手势）</li>
+  <li>P0-3 部署就绪（环境变量 / 静态服务 / Docker）</li>
+</ul>
+</div>
+
+<div class="schedule">
+<h4>第二周：用户系统 + 体验</h4>
+<ul>
+  <li>P0-2 用户系统（JWT 登录 / 数据隔离）</li>
+  <li>P1-5 错误处理（Toast / ErrorBoundary / 网络检测）</li>
+</ul>
+</div>
+
+<div class="schedule">
+<h4>第三周：PWA + 阅读器增强</h4>
+<ul>
+  <li>P1-4 PWA（manifest / Service Worker / iOS 主屏幕）</li>
+  <li>P1-6 阅读器增强（滑动手势 / 深色自动 / 字体优化）</li>
+</ul>
+</div>
+
+<div class="schedule">
+<h4>第四周：性能 + PDF + 笔记</h4>
+<ul>
+  <li>P1-7 性能优化（懒加载 / React Query）</li>
+  <li>P2-8 PDF 阅读器</li>
+  <li>P2-10 笔记增强（选中划线 / Markdown）</li>
+</ul>
+</div>
+
+<div class="footer">
+  AI 阅读伴侣 · 知识花园 · 2026.06.11
+</div>
+
+</body>
+</html>

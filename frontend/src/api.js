@@ -67,3 +67,4 @@ export const searchBooks = (q) => request(`/ai-search?q=${encodeURIComponent(q)}
 
 // ---- File download URL helper ----
 export const getFileUrl = (filePath) => filePath ? filePath : null;
+

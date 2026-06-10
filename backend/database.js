@@ -102,6 +102,15 @@ async function initDb(customPath) {
     }
   }
 
+  // ---- migration: add page_number column to notes if missing ----
+  const noteCols = db.exec("PRAGMA table_info(notes)");
+  if (noteCols.length > 0) {
+    const noteColNames = noteCols[0].values.map(row => row[1]);
+    if (!noteColNames.includes('page_number')) {
+      db.run('ALTER TABLE notes ADD COLUMN page_number INTEGER');
+    }
+  }
+
   save();
   console.log(`[db] initialized at ${dbPath}`);
   return { queryAll, queryOne, run, save };

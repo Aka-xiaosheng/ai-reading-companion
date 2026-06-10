@@ -66,7 +66,12 @@ router.get('/', (req, res, next) => {
     sql += ' ORDER BY updated_at DESC';
 
     const books = queryAll(sql, params);
-    res.json({ data: books });
+    // Attach file_url for books that have a file_path
+    const enriched = books.map(b => ({
+      ...b,
+      file_url: fileUrl(req, b.file_path),
+    }));
+    res.json({ data: enriched });
   } catch (err) {
     next(err);
   }

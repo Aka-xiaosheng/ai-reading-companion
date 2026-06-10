@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
 import * as api from '../api';
 import BookSearch from './BookSearch';
+import EmptyIllustration from './EmptyIllustration';
+import EpubReader from './EpubReader';
 
 const STATUS = {
-  want_to_read:  { label: '想读',   color: 'bg-blue-100 text-blue-700' },
-  reading:       { label: '在读',   color: 'bg-amber-100 text-amber-700' },
-  finished:      { label: '已读',   color: 'bg-green-100 text-green-700' },
+  want_to_read:  { label: '想读',   color: 'bg-accent-50 text-accent-600' },
+  reading:       { label: '在读',   color: 'bg-amber-50 text-amber-700' },
+  finished:      { label: '已读',   color: 'bg-emerald-50 text-emerald-700' },
 };
 
 const FILTERS = [
   { key: '',       label: '全部' },
-  { key: 'reading',       label: '📖 在读' },
-  { key: 'want_to_read',  label: '📋 想读' },
-  { key: 'finished',      label: '✅ 已读' },
+  { key: 'reading',       label: '在读' },
+  { key: 'want_to_read',  label: '想读' },
+  { key: 'finished',      label: '已读' },
 ];
 
 function BookCard({ book, onEdit, onDelete, onViewDetail }) {
@@ -20,59 +22,71 @@ function BookCard({ book, onEdit, onDelete, onViewDetail }) {
   const st = STATUS[book.status] || STATUS.want_to_read;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-shadow flex flex-col gap-3">
-      <div className="flex items-start gap-3">
-        <div className="w-12 h-16 rounded bg-slate-100 flex items-center justify-center text-2xl shrink-0">
-          📖
+    <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-shadow duration-300 flex flex-col gap-4 p-6 group">
+      {/* Cover + Title */}
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-18 rounded-xl bg-[#F7F3EC] flex items-center justify-center text-2xl shrink-0 overflow-hidden transition-transform duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1">
+          {book.cover_url ? (
+            <img
+              src={book.cover_url}
+              alt={book.title}
+              className="w-full h-full object-cover"
+              onError={e => { e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <span className="text-2xl select-none">📖</span>
+          )}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-slate-800 truncate">
+          <h3 className="font-serif font-semibold text-[#1A1A1A] truncate text-base">
             {book.title}
             {book.file_path && (
-              <span className="ml-1.5 text-xs text-amber-500" title={book.file_type === 'pdf' ? 'PDF 文件' : 'EPUB 文件'}>
-                {book.file_type === 'pdf' ? '📄' : '📘'}
+              <span className="ml-1.5 text-xs text-amber-500 font-sans" title={book.file_type === 'pdf' ? 'PDF 文件' : 'EPUB 文件'}>
+                {book.file_type === 'pdf' ? 'PDF' : 'EPUB'}
               </span>
             )}
           </h3>
-          <p className="text-sm text-slate-500">{book.author}</p>
+          <p className="text-sm text-[#6B6B6B] mt-0.5">{book.author}</p>
         </div>
       </div>
 
-      {book.total_pages && (
+      {/* Progress bar */}
+      {book.total_pages > 0 && (
         <div>
-          <div className="flex justify-between text-xs text-slate-500 mb-1">
-            <span>进度</span>
+          <div className="flex justify-between text-xs text-[#9B9B9B] mb-1.5">
+            <span>阅读进度</span>
             <span>{book.current_page} / {book.total_pages} 页 ({pct}%)</span>
           </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-[#F0EBE3] rounded-full overflow-hidden">
             <div
-              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+              className="h-full bg-accent-500 rounded-full transition-all duration-500 ease-out"
               style={{ width: `${pct}%` }}
             />
           </div>
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
+      {/* Actions */}
+      <div className="flex items-center justify-between mt-auto pt-3 border-t border-[#F0EBE3]">
         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${st.color}`}>
           {st.label}
         </span>
         <div className="flex gap-1">
           <button
             onClick={() => onViewDetail(book)}
-            className="text-xs px-3 py-1 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+            className="text-xs sm:text-xs px-2.5 sm:px-3 py-1.5 rounded-xl text-accent-600 hover:bg-accent-50 transition-colors touch-target"
           >
             详情
           </button>
           <button
             onClick={() => onEdit(book)}
-            className="text-xs px-3 py-1 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            className="text-xs sm:text-xs px-2.5 sm:px-3 py-1.5 rounded-xl text-[#6B6B6B] hover:bg-[#F7F3EC] transition-colors touch-target"
           >
             编辑
           </button>
           <button
             onClick={() => { if (window.confirm(`删除《${book.title}》？`)) onDelete(book.id); }}
-            className="text-xs px-2 py-1 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+            className="text-xs sm:text-xs px-2 py-1.5 rounded-xl text-[#B8B8B8] hover:bg-red-50 hover:text-red-400 transition-colors touch-target"
           >
             删除
           </button>
@@ -82,7 +96,7 @@ function BookCard({ book, onEdit, onDelete, onViewDetail }) {
   );
 }
 
-function BookDetailModal({ bookId, onClose }) {
+function BookDetailModal({ bookId, onClose, onOpenReader }) {
   const [book, setBook] = useState(null);
   const [notes, setNotes] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -124,7 +138,10 @@ function BookDetailModal({ bookId, onClose }) {
   if (loading) {
     return (
       <Overlay onClose={onClose}>
-        <div className="p-8 text-center text-slate-400">加载中...</div>
+        <div className="p-8 text-center text-[#9B9B9B]">
+          <div className="animate-pulse text-2xl mb-2">📖</div>
+          <p className="text-sm font-light">加载中...</p>
+        </div>
       </Overlay>
     );
   }
@@ -142,84 +159,94 @@ function BookDetailModal({ bookId, onClose }) {
 
   return (
     <Overlay onClose={onClose} wide>
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">{book.title}</h2>
-          <p className="text-sm text-slate-500">{book.author}</p>
+          <h2 className="text-xl font-serif font-semibold text-[#1A1A1A]">{book.title}</h2>
+          <p className="text-sm text-[#6B6B6B] mt-0.5">{book.author}</p>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+        <button onClick={onClose} className="text-[#B8B8B8] hover:text-[#1A1A1A] text-xl leading-none transition-colors">&times;</button>
       </div>
 
       {/* Book meta */}
-      <div className="flex flex-wrap gap-3 mb-4 text-sm items-center">
+      <div className="flex flex-wrap gap-3 mb-5 text-sm items-center">
         <span className={`px-2.5 py-1 rounded-full font-medium text-xs ${st.color}`}>{st.label}</span>
-        {book.total_pages && (
-          <span className="text-slate-500">{book.current_page} / {book.total_pages} 页 ({pct}%)</span>
+        {book.total_pages > 0 && (
+          <span className="text-[#6B6B6B]">{book.current_page} / {book.total_pages} 页 ({pct}%)</span>
         )}
-        <span className="text-slate-400">{notes.length} 条笔记</span>
+        <span className="text-[#9B9B9B]">{notes.length} 条笔记</span>
 
-        {/* Local file button */}
         {book.file_path && (
-          <a
-            href={book.file_url}
-            target={book.file_type === 'pdf' ? '_blank' : undefined}
-            rel="noreferrer"
-            download={book.file_type === 'epub' ? `${book.title}.epub` : undefined}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
-          >
-            {book.file_type === 'pdf' ? '📖 阅读' : '📥 下载'}
-          </a>
+          <div className="ml-auto flex items-center gap-1.5">
+            {book.file_type === 'epub' && (
+              <button
+                onClick={() => onOpenReader(book)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium bg-accent-500 text-white hover:bg-accent-600 transition-colors"
+              >
+                📖 开始阅读
+              </button>
+            )}
+            <a
+              href={book.file_url}
+              download={`${book.title}.${book.file_type}`}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#F7F3EC] text-[#4A4A4A] border border-[#E8E2D5] hover:bg-[#F0EBE3] transition-colors"
+            >
+              下载
+            </a>
+          </div>
         )}
       </div>
 
       {/* Summary section */}
-      <div className="mb-6 p-4 bg-indigo-50 rounded-xl">
+      <div className="mb-6 p-5 bg-accent-50 rounded-2xl">
         {summary ? (
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm font-semibold text-indigo-700">🤖 AI 摘要</span>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-serif font-semibold text-accent-700">AI 摘要</span>
               <button
                 onClick={handleGenerate}
                 disabled={generating}
-                className="text-xs px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-700 hover:bg-indigo-300 disabled:opacity-50"
+                className="text-xs px-2.5 py-1 rounded-full bg-accent-200 text-accent-700 hover:bg-accent-300 disabled:opacity-50 transition-colors"
               >
                 {generating ? '生成中...' : '重新生成'}
               </button>
             </div>
             {summary.key_points && (
-              <div className="text-sm text-indigo-800 mb-2 whitespace-pre-wrap leading-relaxed">
+              <div className="text-sm text-accent-800 mb-3 whitespace-pre-wrap leading-relaxed">
                 {summary.key_points}
               </div>
             )}
-            <p className="text-sm text-indigo-900 whitespace-pre-wrap leading-relaxed border-t border-indigo-200 pt-2 mt-2">
+            <p className="text-sm text-accent-900 whitespace-pre-wrap leading-relaxed border-t border-accent-200 pt-3 mt-2">
               {summary.content}
             </p>
           </div>
         ) : (
-          <div className="text-center py-3">
-            <p className="text-sm text-indigo-600 mb-3">暂无 AI 摘要</p>
+          <div className="text-center py-4">
+            <p className="text-sm text-accent-600 mb-3 font-light">暂无 AI 摘要</p>
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="px-5 py-2.5 text-sm bg-accent-600 text-white rounded-2xl hover:bg-accent-700 disabled:opacity-50 transition-colors"
             >
-              {generating ? '🤖 AI 正在分析笔记...' : '🤖 生成 AI 摘要'}
+              {generating ? 'AI 正在分析笔记...' : '生成 AI 摘要'}
             </button>
-            {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+            {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
           </div>
         )}
       </div>
 
       {/* Notes list */}
-      <h3 className="text-sm font-semibold text-slate-600 mb-2">📝 读书笔记 ({notes.length})</h3>
+      <h3 className="text-sm font-serif font-semibold text-[#4A4A4A] mb-3">读书笔记 ({notes.length})</h3>
       {notes.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-4">暂无笔记。添加笔记后，AI 可以生成更准确的摘要。</p>
+        <div className="text-center py-8">
+          <EmptyIllustration type="notes" size={100} className="mb-4" />
+          <p className="text-sm text-[#9B9B9B] font-light">暂无笔记，添加笔记后 AI 可以生成更准确的摘要</p>
+        </div>
       ) : (
-        <div className="space-y-2 max-h-60 overflow-y-auto">
+        <div className="space-y-2.5 max-h-60 overflow-y-auto">
           {notes.map(note => (
-            <div key={note.id} className="bg-white border border-slate-100 rounded-lg p-3">
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.content}</p>
-              <p className="text-xs text-slate-400 mt-1">{new Date(note.created_at).toLocaleString('zh-CN')}</p>
+            <div key={note.id} className="bg-[#F7F3EC] border border-[#F0EBE3] rounded-xl p-4">
+              <p className="text-sm text-[#1A1A1A] whitespace-pre-wrap leading-relaxed">{note.content}</p>
+              <p className="text-xs text-[#B8B8B8] mt-2">{new Date(note.created_at).toLocaleString('zh-CN')}</p>
             </div>
           ))}
         </div>
@@ -230,11 +257,21 @@ function BookDetailModal({ bookId, onClose }) {
 
 function Overlay({ children, onClose, wide }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#1A1A1A]/15 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
-        className={`bg-white rounded-2xl shadow-xl p-6 mx-4 max-h-[90vh] overflow-y-auto ${wide ? 'w-full max-w-lg' : 'w-full max-w-md'}`}
+        className={`bg-white shadow-card-hover p-4 sm:p-6 max-h-[90vh] overflow-y-auto w-full
+          sm:rounded-2xl sm:m-4 sm:max-w-md
+          rounded-t-2xl animate-slide-up
+          ${wide ? 'sm:max-w-lg' : 'sm:max-w-md'}`}
         onClick={e => e.stopPropagation()}
       >
+        {/* Drag handle visible on mobile */}
+        <div className="sm:hidden flex justify-center mb-3">
+          <div className="w-10 h-1 rounded-full bg-[#D4CDC0]" />
+        </div>
         {children}
       </div>
     </div>
@@ -285,37 +322,37 @@ function BookModal({ book, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1A1A1A]/15 backdrop-blur-sm" onClick={onClose}>
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-2xl shadow-card-hover p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">
+        <h2 className="text-xl font-serif font-semibold text-[#1A1A1A] mb-5">
           {isEdit ? '编辑书籍' : '添加新书'}
         </h2>
 
         {!isEdit && (
           <>
-            <Field label="书名 *" name="title" value={form.title} onChange={handleChange} placeholder="例如：三体" />
-            <Field label="作者 *" name="author" value={form.author} onChange={handleChange} placeholder="例如：刘慈欣" />
+            <Field label="书名" name="title" value={form.title} onChange={handleChange} placeholder="例如：三体" required />
+            <Field label="作者" name="author" value={form.author} onChange={handleChange} placeholder="例如：刘慈欣" required />
             <Field label="封面 URL" name="cover_url" value={form.cover_url} onChange={handleChange} placeholder="可选" />
             <Field label="总页数" name="total_pages" type="number" value={form.total_pages} onChange={handleChange} placeholder="例如：400" />
 
             {/* File upload */}
-            <label className="block mb-4">
-              <span className="text-sm font-medium text-slate-600">电子书文件 <span className="text-slate-400 font-normal">(可选)</span></span>
-              <div className="mt-1">
-                <label className="flex items-center gap-2 px-3 py-2.5 border border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors">
+            <label className="block mb-5">
+              <span className="text-sm font-medium text-[#4A4A4A]">电子书文件 <span className="text-[#9B9B9B] font-normal">(可选)</span></span>
+              <div className="mt-1.5">
+                <label className="flex items-center gap-2 px-4 py-3 border border-dashed border-[#D4CDC0] rounded-2xl cursor-pointer hover:border-accent-300 hover:bg-accent-50/50 transition-colors">
                   <span className="text-lg">📎</span>
-                  <span className="text-sm text-slate-500 truncate flex-1">
+                  <span className="text-sm text-[#6B6B6B] truncate flex-1">
                     {file ? file.name : '点击选择 EPUB 或 PDF 文件'}
                   </span>
                   {file && (
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                      className="text-xs text-red-400 hover:text-red-600"
+                      className="text-xs text-red-400 hover:text-red-500"
                     >
                       ✕
                     </button>
@@ -328,38 +365,38 @@ function BookModal({ book, onSave, onClose }) {
                   />
                 </label>
               </div>
-              <p className="text-xs text-slate-400 mt-1">支持 EPUB、PDF 格式，最大 50MB</p>
+              <p className="text-xs text-[#B8B8B8] mt-1.5">支持 EPUB、PDF 格式，最大 50MB</p>
             </label>
           </>
         )}
 
         {isEdit && (
           <>
-            <p className="text-slate-700 font-medium mb-4">{book.title} · {book.author}</p>
+            <p className="text-[#1A1A1A] font-medium mb-5 text-sm">{book.title} · {book.author}</p>
             <Field label="当前页数" name="current_page" type="number" value={form.current_page} onChange={handleChange} />
-            {form.total_pages && (
-              <p className="text-xs text-slate-400 -mt-2 mb-3">
+            {form.total_pages > 0 && (
+              <p className="text-xs text-[#9B9B9B] -mt-2 mb-4">
                 共 {form.total_pages} 页 · {form.total_pages > 0 ? Math.round((form.current_page / form.total_pages) * 100) : 0}%
               </p>
             )}
           </>
         )}
 
-        <label className="block text-sm font-medium text-slate-600 mb-1">状态</label>
+        <label className="block text-sm font-medium text-[#4A4A4A] mb-1.5">状态</label>
         <select
           name="status"
           value={form.status}
           onChange={handleChange}
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          className="w-full border border-[#E8E2D5] rounded-xl px-3.5 py-2.5 text-sm mb-5 bg-white focus:outline-none focus:ring-2 focus:ring-accent-200 focus:border-accent-300 transition-colors"
         >
-          <option value="want_to_read">📋 想读</option>
-          <option value="reading">📖 在读</option>
-          <option value="finished">✅ 已读</option>
+          <option value="want_to_read">想读</option>
+          <option value="reading">在读</option>
+          <option value="finished">已读</option>
         </select>
 
         <div className="flex gap-3 justify-end">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-lg">取消</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+          <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm text-[#6B6B6B] hover:bg-[#F7F3EC] rounded-xl transition-colors">取消</button>
+          <button type="submit" disabled={saving} className="px-5 py-2.5 text-sm bg-accent-600 text-white rounded-xl hover:bg-accent-700 disabled:opacity-50 transition-colors">
             {saving ? '保存中...' : '保存'}
           </button>
         </div>
@@ -368,17 +405,20 @@ function BookModal({ book, onSave, onClose }) {
   );
 }
 
-function Field({ label, name, type = 'text', value, onChange, placeholder }) {
+function Field({ label, name, type = 'text', value, onChange, placeholder, required }) {
   return (
-    <label className="block mb-3">
-      <span className="text-sm font-medium text-slate-600">{label}</span>
+    <label className="block mb-4">
+      <span className="text-sm font-medium text-[#4A4A4A]">
+        {label}
+        {required && <span className="text-accent-500 ml-0.5">*</span>}
+      </span>
       <input
         type={type}
         name={name}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        className="mt-1.5 w-full border border-[#E8E2D5] rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent-200 focus:border-accent-300 transition-colors"
       />
     </label>
   );
@@ -404,59 +444,61 @@ function RecommendationsModal({ onClose, onAdd }) {
 
   return (
     <Overlay onClose={onClose} wide>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-800">🎯 智能推荐</h2>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-serif font-semibold text-[#1A1A1A]">智能推荐</h2>
+        <button onClick={onClose} className="text-[#B8B8B8] hover:text-[#1A1A1A] text-xl leading-none transition-colors">&times;</button>
       </div>
 
       {loading && (
         <div className="py-12 text-center">
-          <p className="text-slate-400 mb-2">🤖 AI 正在分析你的阅读偏好...</p>
-          <p className="text-xs text-slate-300">基于你的阅读历史和笔记生成个性化推荐</p>
+          <div className="animate-pulse text-2xl mb-3">🤖</div>
+          <p className="text-[#9B9B9B] text-sm font-light">AI 正在分析你的阅读偏好...</p>
+          <p className="text-xs text-[#B8B8B8] mt-1">基于你的阅读历史和笔记生成个性化推荐</p>
         </div>
       )}
 
       {error && (
         <div className="py-8 text-center">
-          <p className="text-red-500 mb-3">{error}</p>
-          <p className="text-xs text-slate-400">请确保 .env 中已配置 OPENAI_API_KEY</p>
+          <p className="text-red-400 mb-3">{error}</p>
+          <p className="text-xs text-[#9B9B9B]">请确保 .env 中已配置 OPENAI_API_KEY</p>
         </div>
       )}
 
       {recs && !loading && (
         <>
-          {recs.message && <p className="text-sm text-slate-500 mb-4">{recs.message}</p>}
+          {recs.message && <p className="text-sm text-[#6B6B6B] mb-5">{recs.message}</p>}
           {recs.recommendations && recs.recommendations.length > 0 ? (
             <div className="space-y-3">
               {recs.recommendations.map((r, i) => (
-                <div key={i} className="flex items-start gap-4 bg-slate-50 rounded-xl p-4">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center text-lg shrink-0">
+                <div key={i} className="flex items-start gap-4 bg-[#F7F3EC] rounded-2xl p-5">
+                  <div className="w-10 h-10 rounded-xl bg-accent-100 flex items-center justify-center text-lg shrink-0">
                     📚
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-800">{r.title}</h3>
-                    <p className="text-sm text-slate-500">{r.author}</p>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">{r.reason}</p>
+                    <h3 className="font-serif font-semibold text-[#1A1A1A]">{r.title}</h3>
+                    <p className="text-sm text-[#6B6B6B]">{r.author}</p>
+                    <p className="text-xs text-[#4A4A4A] mt-1.5 leading-relaxed">{r.reason}</p>
                   </div>
                   <button
                     onClick={async () => {
                       await onAdd({ title: r.title, author: r.author, status: 'want_to_read' });
                     }}
-                    className="shrink-0 px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="shrink-0 px-4 py-2 text-xs bg-accent-600 text-white rounded-xl hover:bg-accent-700 transition-colors"
                   >
-                    📚 加入书架
+                    加入书架
                   </button>
                 </div>
               ))}
               {recs.based_on && (
-                <p className="text-xs text-slate-400 text-center mt-3">
+                <p className="text-xs text-[#B8B8B8] text-center mt-4">
                   基于你书架上的 {recs.based_on} 本书生成
                 </p>
               )}
             </div>
           ) : (
-            <div className="py-8 text-center text-slate-400">
-              <p>暂无推荐。请先添加一些在读或已读完的书籍。</p>
+            <div className="py-10 text-center">
+              <EmptyIllustration type="bookshelf" size={100} className="mb-4" />
+              <p className="text-sm text-[#9B9B9B] font-light">暂无推荐，请先添加一些在读或已读完的书籍</p>
             </div>
           )}
         </>
@@ -465,65 +507,73 @@ function RecommendationsModal({ onClose, onAdd }) {
   );
 }
 
-export default function BookList({ books, onAdd, onUpdate, onDelete }) {
+export default function BookList({ books, onAdd, onUpdate, onDelete, onRefresh }) {
   const [filter, setFilter] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState(null);
   const [detailId, setDetailId] = useState(null);
   const [showRecs, setShowRecs] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-
+  const [readerBook, setReaderBook] = useState(null);
   const filtered = filter ? books.filter(b => b.status === filter) : books;
 
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex gap-1.5 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 sm:mb-8">
+        {/* Filter — scrollable row on mobile */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
           {FILTERS.map(f => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`shrink-0 px-3.5 sm:px-4 py-2 rounded-full text-sm font-medium transition-colors touch-target ${
                 filter === f.key
-                  ? 'bg-slate-800 text-white'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  ? 'bg-accent-600 text-white shadow-sm'
+                  : 'bg-white text-[#6B6B6B] border border-[#E8E2D5] hover:bg-[#F7F3EC]'
               }`}
             >
               {f.label}
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-700 transition-colors"
-        >
-          + 添加书籍
-        </button>
-        <button
-          onClick={() => setShowRecs(true)}
-          className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-500 transition-colors"
-        >
-          🎯 智能推荐
-        </button>
-        <button
-          onClick={() => setShowSearch(true)}
-          className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-500 transition-colors"
-        >
-          🔍 联网找书
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-accent-600 text-white text-sm font-medium rounded-2xl hover:bg-accent-700 transition-colors shadow-sm touch-target"
+          >
+            <span className="sm:hidden">+ 添加</span>
+            <span className="hidden sm:inline">添加书籍</span>
+          </button>
+          <button
+            onClick={() => setShowRecs(true)}
+            className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-accent-500 text-white text-sm font-medium rounded-2xl hover:bg-accent-600 transition-colors shadow-sm touch-target"
+          >
+            <span className="sm:hidden">🤖 推荐</span>
+            <span className="hidden sm:inline">智能推荐</span>
+          </button>
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-[#4A7C6B] text-white text-sm font-medium rounded-2xl hover:bg-accent-600 transition-colors shadow-sm touch-target"
+          >
+            <span className="sm:hidden">🔍 找书</span>
+            <span className="hidden sm:inline">联网找书</span>
+          </button>
+        </div>
       </div>
 
       {/* Empty state */}
       {filtered.length === 0 && (
-        <div className="text-center py-20 text-slate-400">
-          <p className="text-4xl mb-3">📚</p>
-          <p>{filter ? '该分类下暂无书籍' : '书架空空，添加你的第一本书吧'}</p>
+        <div className="text-center py-16 sm:py-20">
+          <EmptyIllustration type="bookshelf" size={120} className="mb-4 sm:mb-6" />
+          <p className="text-[#9B9B9B] font-light text-sm sm:text-base">
+            {filter ? '该分类下暂无书籍' : '书架空空，添加你的第一本书吧'}
+          </p>
         </div>
       )}
 
       {/* Book grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
         {filtered.map(book => (
           <BookCard
             key={book.id}
@@ -558,6 +608,18 @@ export default function BookList({ books, onAdd, onUpdate, onDelete }) {
         <BookDetailModal
           bookId={detailId}
           onClose={() => setDetailId(null)}
+          onOpenReader={(book) => {
+            setDetailId(null);
+            setReaderBook(book);
+          }}
+        />
+      )}
+
+      {/* EPUB Reader */}
+      {readerBook && (
+        <EpubReader
+          book={readerBook}
+          onClose={() => setReaderBook(null)}
         />
       )}
 
