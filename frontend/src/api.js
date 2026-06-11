@@ -1,4 +1,21 @@
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// ---- Auth token management ----
+function getToken() {
+  return localStorage.getItem('auth_token');
+}
+
+export function setToken(token) {
+  if (token) {
+    localStorage.setItem('auth_token', token);
+  } else {
+    localStorage.removeItem('auth_token');
+  }
+}
+
+export function isLoggedIn() {
+  return !!getToken();
+}
 
 async function request(url, options = {}) {
   const { isFormData, ...fetchOptions } = options;
@@ -6,6 +23,12 @@ async function request(url, options = {}) {
   const headers = {};
   if (!isFormData) {
     headers['Content-Type'] = 'application/json';
+  }
+
+  // Attach auth token if available
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const res = await fetch(`${API_BASE}${url}`, {
@@ -16,6 +39,21 @@ async function request(url, options = {}) {
   if (!res.ok) throw new Error(json.error || 'Request failed');
   return json.data;
 }
+
+// ---- Auth ----
+export const register = (username, password) =>
+  request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+
+export const login = (username, password) =>
+  request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+
+export const getMe = () => request('/auth/me');
 
 // ---- Books ----
 export const fetchBooks = (status) => request(`/books${status ? `?status=${status}` : ''}`);
@@ -67,4 +105,3 @@ export const searchBooks = (q) => request(`/ai-search?q=${encodeURIComponent(q)}
 
 // ---- File download URL helper ----
 export const getFileUrl = (filePath) => filePath ? filePath : null;
-

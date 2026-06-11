@@ -54,6 +54,17 @@ async function initDb(customPath) {
 
   db.run('PRAGMA foreign_keys = ON');
 
+  // ---- users table ----
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // ---- books table ----
   db.run(`
     CREATE TABLE IF NOT EXISTS books (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,8 +75,10 @@ async function initDb(customPath) {
       current_page INTEGER DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'want_to_read'
         CHECK(status IN ('want_to_read', 'reading', 'finished')),
+      user_id INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     )
   `);
 
@@ -74,8 +87,10 @@ async function initDb(customPath) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       book_id INTEGER NOT NULL,
       content TEXT NOT NULL,
+      user_id INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+      FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     )
   `);
 
@@ -90,24 +105,29 @@ async function initDb(customPath) {
     )
   `);
 
-  // ---- migration: add file_path / file_type columns if missing ----
-  const cols = db.exec("PRAGMA table_info(books)");
-  if (cols.length > 0) {
-    const colNames = cols[0].values.map(row => row[1]); // column name is index 1
+  // ---- migration: add columns if missing (for databases created before auth) ----
+  const bookCols = db.exec("PRAGMA table_info(books)");
+  if (bookCols.length > 0) {
+    const colNames = bookCols[0].values.map(row => row[1]);
     if (!colNames.includes('file_path')) {
       db.run('ALTER TABLE books ADD COLUMN file_path TEXT');
     }
     if (!colNames.includes('file_type')) {
       db.run('ALTER TABLE books ADD COLUMN file_type TEXT');
     }
+    if (!colNames.includes('user_id')) {
+      db.run('ALTER TABLE books ADD COLUMN user_id INTEGER');
+    }
   }
 
-  // ---- migration: add page_number column to notes if missing ----
   const noteCols = db.exec("PRAGMA table_info(notes)");
   if (noteCols.length > 0) {
     const noteColNames = noteCols[0].values.map(row => row[1]);
     if (!noteColNames.includes('page_number')) {
       db.run('ALTER TABLE notes ADD COLUMN page_number INTEGER');
+    }
+    if (!noteColNames.includes('user_id')) {
+      db.run('ALTER TABLE notes ADD COLUMN user_id INTEGER');
     }
   }
 

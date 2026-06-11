@@ -7,10 +7,13 @@
 | 优先级 | 任务 | 说明 |
 |--------|------|------|
 | P0-1 | 移动端响应式适配 | iOS safe-area、100vh 修复、底部弹出、触摸手势、响应式工具栏、霞鹜文楷字体 |
+| P0-2 | 用户认证 | JWT 登录/注册、bcryptjs 密码加密、authMiddleware、users 表、前后端完整集成 |
+| P0-3 | 部署上线 | CORS 限制、VITE_API_URL、vercel.json、Railway Procfile、.env.example 完善、README 部署文档 |
 
 ### 核心功能已实现
+- **用户认证**（JWT 登录/注册，bcryptjs 密码加密，authMiddleware 路由保护）
 - 书籍 CRUD（添加/编辑/删除/搜索）
-- EPUB 文件上传与解析（better-sqlite3 存储）
+- EPUB 文件上传与解析（sql.js 存储）
 - EPUB 阅读器（react-ebookjs / foliate-js）
   - 目录导航（TOC 侧边抽屉）
   - 夜间模式（`setStyles()` 切换）
@@ -33,41 +36,7 @@
 
 路线图详见 `docs/AI阅读伴侣-上线路线图.doc`
 
-### 🔴 P0-2：用户认证（建议明天开始）
-
-**目标**：支持多用户，每人独立的书架和阅读数据
-
-**方案**（已决策）：
-- **JWT 认证**（无状态，不引入 Redis）
-- 登录接口：`POST /api/auth/login` → `{ token }`
-- 注册接口：`POST /api/auth/register` → `{ token }`
-- 中间件：`authMiddleware` 验证 `Authorization: Bearer <token>`
-- 密码加密：`bcryptjs`
-- 数据库改动：新增 `users` 表，`books` 和 `notes` 表加 `userId` 外键
-
-**后端实施步骤**：
-1. `npm install bcryptjs jsonwebtoken`
-2. 新建 `backend/routes/auth.js`（登录/注册路由）
-3. 新建 `backend/middleware/auth.js`（JWT 验证中间件）
-4. 修改 `backend/database.js`：新增 `users` 表 + `books.user_id` + `notes.user_id`
-5. 修改 `backend/routes/books.js`：所有路由加 `authMiddleware`，按 `userId` 过滤
-6. 修改 `backend/routes/notes.js`：同上
-7. 修改 `backend/server.js`：注册 `/api/auth` 路由
-
-**前端实施步骤**：
-1. 新建 `frontend/src/components/Login.jsx`（登录/注册表单）
-2. 修改 `frontend/src/api.js`：加上 `Authorization` header + token 存储
-3. 修改 `frontend/src/App.jsx`：未登录时显示 Login 页面
-4. `localStorage` 存储 token
-
-### 🔴 P0-3：部署上线
-
-- 后端：Railway / Render（Node.js + SQLite）
-- 前端：Vercel / Netlify（静态站点）
-- 环境变量配置（API key、JWT secret）
-- CORS 配置
-
-### 🟡 P1：AI 增强
+### 🟡 P1：AI 增强（建议下一步）
 - OpenAI API 集成（书籍摘要、主要人物/论点分析）
 - 个性化推荐引擎
 - 笔记功能完善
@@ -110,10 +79,12 @@ cd frontend && npm run dev
 
 1. **Windows 上 `--watch` 会导致后端不断重启**，使用 `node server.js` 代替
 2. **EPUB 语言标签**：`zh_CN`（下划线）需转为 `zh-CN`（连字符），已在 EpubReader 中处理
-3. **上传目录**：`backend/uploads/` 需存在 `.gitkeep`
+3. **上传目录**：`backend/uploads/` 需存在 `.gitkeep`；服务器启动时自动创建
 4. **数据库文件**：`*.db` 在 `.gitignore` 中，每台机器独立生成
+5. **部署**：后端推荐 Railway（有免费持久卷），前端推荐 Vercel；详见 README.md 部署章节
+6. **JWT_SECRET**：生产环境务必设置强随机密钥，默认值仅用于开发
 
 ---
 
 > 💡 明天在新电脑上，直接 `git clone` 后在项目目录运行 Claude Code，把这段发给我：
-> "继续昨天的工作，阅读 MEMORY.md，继续 P0-2 用户认证的开发"
+> "继续昨天的工作，阅读 MEMORY.md，继续 P1 AI 增强的开发"

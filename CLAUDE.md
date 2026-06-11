@@ -8,13 +8,13 @@
 # 技术栈
 - 前端：React + Tailwind CSS + Vite
 - 后端：Node.js + Express
-- 数据库：SQLite（better-sqlite3，文件型，无需额外安装）
+- 数据库：SQLite（sql.js，文件型，无需额外安装）
 - AI 接口：OpenAI API（或 Claude API，可配置切换）
 - 部署：前后端可分别部署，或后端简易部署到 Railway / Render
 
 # 项目结构
 所有前端代码放在 frontend/，后端代码放在 backend/。
-开发时，前端运行在 localhost:3000，后端在 localhost:3001。
+开发时，前端运行在 localhost:3000，后端在 localhost:3005。
 前端通过 Vite proxy（vite.config.js）将 /api 请求转发到后端。
 
 ```

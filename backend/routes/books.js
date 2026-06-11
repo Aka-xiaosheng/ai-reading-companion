@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { getDb } = require('../database');
+const authMiddleware = require('../middleware/auth');
 
 // ---- multer config ----
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
@@ -11,7 +12,6 @@ const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
   filename: (_req, file, cb) => {
-    // safe filename: timestamp + original extension
     const ext = path.extname(file.originalname).toLowerCase();
     const safe = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext;
     cb(null, safe);
@@ -36,7 +36,6 @@ const upload = multer({
 // ---- helper: delete old file ----
 function removeUpload(filePath) {
   if (!filePath) return;
-  // filePath is relative to uploads dir, e.g. "1717700000000-abc123.pdf"
   const full = path.join(UPLOADS_DIR, filePath);
   try { if (fs.existsSync(full)) fs.unlinkSync(full); } catch { /* ignore */ }
 }
@@ -47,26 +46,28 @@ function fileUrl(req, filePath) {
   return `/api/books/file/${encodeURIComponent(filePath)}`;
 }
 
+// ---- all book routes require authentication ----
+router.use(authMiddleware);
+
 // ======================== ROUTES ========================
 
-// GET /api/books — list all books, optional ?status= filter
+// GET /api/books — list user's books, optional ?status= filter
 router.get('/', (req, res, next) => {
   try {
     const { queryAll } = getDb();
     const { status } = req.query;
 
-    let sql = 'SELECT * FROM books';
-    const params = [];
+    let sql = 'SELECT * FROM books WHERE user_id = ?';
+    const params = [req.userId];
 
     if (status) {
-      sql += ' WHERE status = ?';
+      sql += ' AND status = ?';
       params.push(status);
     }
 
     sql += ' ORDER BY updated_at DESC';
 
     const books = queryAll(sql, params);
-    // Attach file_url for books that have a file_path
     const enriched = books.map(b => ({
       ...b,
       file_url: fileUrl(req, b.file_path),
@@ -83,7 +84,8 @@ router.get('/recommendations', async (req, res, next) => {
     const { queryAll } = getDb();
 
     const books = queryAll(
-      "SELECT * FROM books WHERE status IN ('reading', 'finished') ORDER BY updated_at DESC"
+      "SELECT * FROM books WHERE user_id = ? AND status IN ('reading', 'finished') ORDER BY updated_at DESC",
+      [req.userId]
     );
 
     if (books.length === 0) {
@@ -95,8 +97,8 @@ router.get('/recommendations', async (req, res, next) => {
     const booksWithNotes = [];
     for (const b of books) {
       const notes = queryAll(
-        'SELECT content FROM notes WHERE book_id = ? ORDER BY created_at DESC LIMIT 3',
-        [b.id]
+        'SELECT content FROM notes WHERE book_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 3',
+        [b.id, req.userId]
       );
       booksWithNotes.push({
         title: b.title,
@@ -205,14 +207,18 @@ router.get('/file/:filename', (req, res, next) => {
 router.get('/:id', (req, res, next) => {
   try {
     const { queryOne, queryAll } = getDb();
-    const book = queryOne('SELECT * FROM books WHERE id = ?', [req.params.id]);
+    const book = queryOne(
+      'SELECT * FROM books WHERE id = ? AND user_id = ?',
+      [req.params.id, req.userId]
+    );
 
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
     const notesCount = queryAll(
-      'SELECT COUNT(*) AS count FROM notes WHERE book_id = ?', [req.params.id]
+      'SELECT COUNT(*) AS count FROM notes WHERE book_id = ? AND user_id = ?',
+      [req.params.id, req.userId]
     )[0]?.count ?? 0;
 
     const summary = queryOne(
@@ -237,11 +243,9 @@ router.post('/', upload.single('file'), (req, res, next) => {
   try {
     const { queryOne, run, save } = getDb();
 
-    // req.body may come from JSON or multipart
     const { title, author, cover_url, total_pages, status } = req.body;
 
     if (!title || !author) {
-      // clean up uploaded file if validation fails
       if (req.file) removeUpload(req.file.filename);
       return res.status(400).json({ error: 'title and author are required' });
     }
@@ -250,8 +254,8 @@ router.post('/', upload.single('file'), (req, res, next) => {
     const fileType = req.file ? path.extname(req.file.originalname).toLowerCase().replace('.', '') : null;
 
     const result = run(
-      `INSERT INTO books (title, author, cover_url, total_pages, current_page, status, file_path, file_type)
-       VALUES (?, ?, ?, ?, 0, ?, ?, ?)`,
+      `INSERT INTO books (title, author, cover_url, total_pages, current_page, status, file_path, file_type, user_id)
+       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
       [
         title,
         author,
@@ -260,6 +264,7 @@ router.post('/', upload.single('file'), (req, res, next) => {
         status || 'want_to_read',
         filePath,
         fileType,
+        req.userId,
       ]
     );
     save();
@@ -276,7 +281,10 @@ router.post('/', upload.single('file'), (req, res, next) => {
 router.put('/:id', upload.single('file'), (req, res, next) => {
   try {
     const { queryOne, run, save } = getDb();
-    const existing = queryOne('SELECT * FROM books WHERE id = ?', [req.params.id]);
+    const existing = queryOne(
+      'SELECT * FROM books WHERE id = ? AND user_id = ?',
+      [req.params.id, req.userId]
+    );
 
     if (!existing) {
       if (req.file) removeUpload(req.file.filename);
@@ -285,11 +293,10 @@ router.put('/:id', upload.single('file'), (req, res, next) => {
 
     const { title, author, cover_url, total_pages, current_page, status } = req.body;
 
-    // File handling: if new file uploaded, remove old one
     let filePath = existing.file_path;
     let fileType = existing.file_type;
     if (req.file) {
-      removeUpload(existing.file_path); // delete old file
+      removeUpload(existing.file_path);
       filePath = req.file.filename;
       fileType = path.extname(req.file.originalname).toLowerCase().replace('.', '');
     }
@@ -300,7 +307,7 @@ router.put('/:id', upload.single('file'), (req, res, next) => {
            total_pages = ?, current_page = ?, status = ?,
            file_path = ?, file_type = ?,
            updated_at = datetime('now')
-       WHERE id = ?`,
+       WHERE id = ? AND user_id = ?`,
       [
         title ?? existing.title,
         author ?? existing.author,
@@ -311,6 +318,7 @@ router.put('/:id', upload.single('file'), (req, res, next) => {
         filePath,
         fileType,
         req.params.id,
+        req.userId,
       ]
     );
     save();
@@ -327,16 +335,18 @@ router.put('/:id', upload.single('file'), (req, res, next) => {
 router.delete('/:id', (req, res, next) => {
   try {
     const { queryOne, run, save } = getDb();
-    const existing = queryOne('SELECT * FROM books WHERE id = ?', [req.params.id]);
+    const existing = queryOne(
+      'SELECT * FROM books WHERE id = ? AND user_id = ?',
+      [req.params.id, req.userId]
+    );
 
     if (!existing) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    // Remove uploaded file if exists
     removeUpload(existing.file_path);
 
-    run('DELETE FROM books WHERE id = ?', [req.params.id]);
+    run('DELETE FROM books WHERE id = ? AND user_id = ?', [req.params.id, req.userId]);
     save();
 
     res.json({ data: { message: 'Book deleted' } });
@@ -363,15 +373,18 @@ router.use((err, _req, res, next) => {
 router.post('/:id/summary', async (req, res, next) => {
   try {
     const { queryOne, queryAll, run, save } = getDb();
-    const book = queryOne('SELECT * FROM books WHERE id = ?', [req.params.id]);
+    const book = queryOne(
+      'SELECT * FROM books WHERE id = ? AND user_id = ?',
+      [req.params.id, req.userId]
+    );
 
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
     const notes = queryAll(
-      'SELECT * FROM notes WHERE book_id = ? ORDER BY created_at ASC',
-      [req.params.id]
+      'SELECT * FROM notes WHERE book_id = ? AND user_id = ? ORDER BY created_at ASC',
+      [req.params.id, req.userId]
     );
 
     if (notes.length === 0) {
