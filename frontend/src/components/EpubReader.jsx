@@ -7,6 +7,7 @@ import {
   useBookNavigator,
   loadEPUB,
 } from 'react-ebookjs';
+import { getFileUrl } from '../api';
 
 const FONT_SIZES = [
   { label: '小', value: 14 },
@@ -99,8 +100,9 @@ export default function EpubReader({ book, onClose }) {
       setLoading(true);
       setLoadError(null);
       try {
-        console.log('[EpubReader] fetching:', book.file_url);
-        const res = await fetch(book.file_url);
+        const fileUrl = getFileUrl(book.file_url);
+        console.log('[EpubReader] fetching:', fileUrl);
+        const res = await fetch(fileUrl);
         console.log('[EpubReader] fetch status:', res.status);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();

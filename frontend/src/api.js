@@ -1,5 +1,8 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+// Backend origin (without /api) — used for direct file access
+const API_ORIGIN = API_BASE === '/api' ? '' : API_BASE.replace(/\/api$/, '');
+
 // ---- Auth token management ----
 function getToken() {
   return localStorage.getItem('auth_token');
@@ -104,4 +107,10 @@ export const getRecommendations = () => request('/books/recommendations');
 export const searchBooks = (q) => request(`/ai-search?q=${encodeURIComponent(q)}`);
 
 // ---- File download URL helper ----
-export const getFileUrl = (filePath) => filePath ? filePath : null;
+// file_url from backend is like "/api/books/file/filename.epub"
+// In dev (proxy), relative path works. In production, we need full Railway URL.
+export const getFileUrl = (filePath) => {
+  if (!filePath) return null;
+  if (filePath.startsWith('http')) return filePath;
+  return API_ORIGIN ? API_ORIGIN + filePath : filePath;
+};

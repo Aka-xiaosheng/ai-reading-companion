@@ -17,7 +17,7 @@ const FILTERS = [
   { key: 'finished',      label: '已读' },
 ];
 
-function BookCard({ book, onEdit, onDelete, onViewDetail }) {
+function BookCard({ book, onEdit, onDelete, onViewDetail, onOpenReader }) {
   const pct = book.total_pages ? Math.round((book.current_page / book.total_pages) * 100) : 0;
   const st = STATUS[book.status] || STATUS.want_to_read;
 
@@ -72,6 +72,14 @@ function BookCard({ book, onEdit, onDelete, onViewDetail }) {
           {st.label}
         </span>
         <div className="flex gap-1">
+          {book.file_type === 'epub' && (
+            <button
+              onClick={() => onOpenReader(book)}
+              className="text-xs sm:text-xs px-2.5 sm:px-3 py-1.5 rounded-xl text-white bg-accent-500 hover:bg-accent-600 transition-colors touch-target"
+            >
+              阅读
+            </button>
+          )}
           <button
             onClick={() => onViewDetail(book)}
             className="text-xs sm:text-xs px-2.5 sm:px-3 py-1.5 rounded-xl text-accent-600 hover:bg-accent-50 transition-colors touch-target"
@@ -379,6 +387,37 @@ function BookModal({ book, onSave, onClose }) {
                 共 {form.total_pages} 页 · {form.total_pages > 0 ? Math.round((form.current_page / form.total_pages) * 100) : 0}%
               </p>
             )}
+
+            {/* File upload for edit — allow attaching EPUB/PDF to existing book */}
+            <label className="block mb-5">
+              <span className="text-sm font-medium text-[#4A4A4A]">
+                电子书文件 {book.file_path && <span className="text-xs text-accent-600">(已上传，可替换)</span>}
+              </span>
+              <div className="mt-1.5">
+                <label className="flex items-center gap-2 px-4 py-3 border border-dashed border-[#D4CDC0] rounded-2xl cursor-pointer hover:border-accent-300 hover:bg-accent-50/50 transition-colors">
+                  <span className="text-lg">📎</span>
+                  <span className="text-sm text-[#6B6B6B] truncate flex-1">
+                    {file ? file.name : book.file_path ? `已上传: ${book.file_path.split('/').pop()}` : '点击选择 EPUB 或 PDF 文件'}
+                  </span>
+                  {file && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                      className="text-xs text-red-400 hover:text-red-500"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <input
+                    type="file"
+                    accept=".epub,.pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <p className="text-xs text-[#B8B8B8] mt-1.5">支持 EPUB、PDF 格式，最大 50MB</p>
+            </label>
           </>
         )}
 
@@ -581,6 +620,7 @@ export default function BookList({ books, onAdd, onUpdate, onDelete, onRefresh }
             onEdit={setEditing}
             onDelete={onDelete}
             onViewDetail={(b) => setDetailId(b.id)}
+            onOpenReader={setReaderBook}
           />
         ))}
       </div>

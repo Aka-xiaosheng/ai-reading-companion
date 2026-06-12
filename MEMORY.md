@@ -1,6 +1,6 @@
 # AI 阅读伴侣 — 项目进度
 
-## 当前状态（2026-06-11）
+## 当前状态（2026-06-12 · 已部署上线 🚀）
 
 ### ✅ 已完成
 
@@ -8,7 +8,12 @@
 |--------|------|------|
 | P0-1 | 移动端响应式适配 | iOS safe-area、100vh 修复、底部弹出、触摸手势、响应式工具栏、霞鹜文楷字体 |
 | P0-2 | 用户认证 | JWT 登录/注册、bcryptjs 密码加密、authMiddleware、users 表、前后端完整集成 |
-| P0-3 | 部署上线 | CORS 限制、VITE_API_URL、vercel.json、Railway Procfile、.env.example 完善、README 部署文档 |
+| P0-3 | 部署上线 | ✅ Railway 后端 + Vercel 前端已上线，见下方部署信息 |
+
+### 🌐 线上地址
+- **前端**：https://frontend-xi-six-97.vercel.app
+- **后端 API**：https://responsible-integrity-production-8806.up.railway.app
+- **API 健康检查**：https://responsible-integrity-production-8806.up.railway.app/api/health
 
 ### 核心功能已实现
 - **用户认证**（JWT 登录/注册，bcryptjs 密码加密，authMiddleware 路由保护）

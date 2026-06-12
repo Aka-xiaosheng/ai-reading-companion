@@ -20,11 +20,10 @@ if (CORS_ORIGIN) {
 }
 app.use(express.json());
 
-// Routes
-app.use('/api/auth', authRouter);
-app.use('/api/books', booksRouter);
-app.use('/api', notesRouter);
-app.use('/api', aiSearchRouter);
+// Health check (before auth-protected routes)
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // Root
 app.get('/', (_req, res) => {
@@ -41,10 +40,11 @@ app.get('/', (_req, res) => {
   });
 });
 
-// Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' });
-});
+// Routes (aiSearchRouter before notesRouter — notesRouter has blanket auth middleware)
+app.use('/api/auth', authRouter);
+app.use('/api/books', booksRouter);
+app.use('/api', aiSearchRouter);
+app.use('/api', notesRouter);
 
 // 404
 app.use((_req, res) => {
@@ -61,12 +61,26 @@ app.use((err, _req, res, _next) => {
 async function start() {
   // Ensure uploads directory exists
   const fs = require('fs');
-  const uploadsDir = require('path').join(__dirname, 'uploads');
+  const path = require('path');
+  const dbPath = process.env.DATABASE_PATH;
+
+  // Database directory (on persistent volume if DATABASE_PATH is set)
+  let uploadsDir;
+  if (dbPath) {
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    uploadsDir = path.join(dbDir, 'uploads');
+  } else {
+    uploadsDir = path.join(__dirname, 'uploads');
+  }
+
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  await initDb(process.env.DATABASE_PATH);
+  await initDb(dbPath);
 
   app.listen(PORT, () => {
     console.log(`[server] AI Reading Companion API v1.0.0`);
